@@ -1,39 +1,24 @@
+#include <NewPing.h>
 
-#define leftCenterSensor   3
-#define leftNearSensor     4
-#define leftFarSensor      5
-#define rightCenterSensor  2
-#define rightNearSensor    1
-#define rightFarSensor     0
-#define middleSensorPin    0
-
-int leftCenterReading;
-int leftNearReading;
-int leftFarReading;
-int rightCenterReading;
-int rightNearReading;
-int rightFarReading;
-int middleReading;
-
-int leftNudge;
-int replaystage;
-int rightNudge;
 
 #define leapTime 200
 
-#define leftMotor1  4
-#define leftMotor2  5
+#define leftMotor1  3
+#define leftMotor2  2
 
-#define rightMotor1 3
-#define rightMotor2 2
+#define rightMotor1 5
+#define rightMotor2 4
 
 #define led 13
 
-#define border 200
+NewPing sonar(12, 11, 300);
+#define turndelay 372
 
-char path[50] = {};
-int pathLength;
+char path[250] = {};
+int pathLength = 0;
 int readLength;
+
+int replaystage;
 
 void setup() {
 
@@ -43,11 +28,11 @@ void setup() {
   //pinMode(rightCenterSensor, INPUT);
   //pinMode(rightNearSensor, INPUT);
   //pinMode(rightFarSensor, INPUT);
-  pinMode(middleSensorPin, INPUT);
+  //pinMode(middleSensorPin, INPUT);
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
-  analogWrite(9, 150);
-  analogWrite(10, 150);
+  analogWrite(9, 155);
+  analogWrite(10, 155);
 
   pinMode(leftMotor1, OUTPUT);
   pinMode(leftMotor2, OUTPUT);
@@ -56,139 +41,153 @@ void setup() {
   pinMode(led, OUTPUT);
   Serial.begin(115200);
   digitalWrite(led, HIGH);
-  delay(1000);
+  delay(10000);
 }
 
+boolean canGo = false;
+
+boolean klaar = false;
 
 void loop() {
 
-  readSensors();
+  int distance = fping();
 
-  if (middleSensorReading < 200) {
+  klaar = (distance > 150);
+  if (klaar)
+  {
     straight();
+    straight();
+    straight();
+    done();
   }
-  else {
-    leftHandWall();
+
+  canGo = (distance > 20);
+
+  right();
+
+  if (fping() > 20)
+  {
+    straight();
+    path[pathLength] = 'R';
+    pathLength++;
+
   }
-
-}
-
-void readSensors() {
-
-  /*
-    leftCenterReading  = analogRead(leftCenterSensor);
-    leftNearReading    = analogRead(leftNearSensor);
-    leftFarReading     = analogRead(leftFarSensor);
-    rightCenterReading = analogRead(rightCenterSensor);
-    rightNearReading   = analogRead(rightNearSensor);
-    rightFarReading    = analogRead(rightFarSensor);
-  */
-
-  middleReading = analogRead(middleSensorPin);
-
-  // serial printing below for debugging purposes
-
-  // Serial.print("leftCenterReading: ");
-  // Serial.println(leftCenterReading);
-  // Serial.print("leftNearReading: ");
-  // Serial.println(leftNearReading);
-  // Serial.print("leftFarReading: ");
-  // Serial.println(leftFarReading);
-
-  // Serial.print("rightCenterReading: ");
-  // Serial.println(rightCenterReading);
-  // Serial.print("rightNearReading: ");
-  // Serial.println(rightNearReading);
-  // Serial.print("rightFarReading: ");
-  // Serial.println(rightFarReading);
-  // delay(200);
-
-
-}
-
-
-void leftHandWall() {
-
-  /*
-    if ( leftFarReading > 200 && rightFarReading > 200) {
-      digitalWrite(leftMotor1, HIGH);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, HIGH);
-      digitalWrite(rightMotor2, LOW);
-      delay(leapTime);
-      readSensors();
-
-      if (leftFarReading > 200 || rightFarReading > 200) {
-        done();
-      }
-      if (leftFarReading < 200 && rightFarReading < 200) {
-        turnLeft();
-      }
-
-    }
-
-    if (leftFarReading > 200) { // if you can turn left then turn left
-      digitalWrite(leftMotor1, HIGH);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, HIGH);
-      digitalWrite(rightMotor2, LOW);
-      delay(leapTime);
-      readSensors();
-
-      if (leftFarReading < 200 && rightFarReading < 200) {
-        turnLeft();
-      }
-      else {
-        done();
-      }
-    }
-
-    if (rightFarReading > 200) {
-      digitalWrite(leftMotor1, HIGH);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, HIGH);
-      digitalWrite(rightMotor2, LOW);
-      delay(30);
-      readSensors();
-
-      if (leftFarReading > 200) {
-        delay(leapTime - 30);
-        readSensors();
-
-        if (rightFarReading > 200 && leftFarReading > 200) {
-          done();
-        }
-        else {
-          turnLeft();
-          return;
-        }
-      }
-      delay(leapTime - 30);
-      readSensors();
-      if (leftFarReading < 200 && leftCenterReading < 200 &&
-          rightCenterReading < 200 && rightFarReading < 200) {
-        turnRight();
-        return;
-      }
-      path[pathLength] = 'S';
-      // Serial.println("s");
-      pathLength++;
-      //Serial.print("Path length: ");
-      //Serial.println(pathLength);
-      if (path[pathLength - 2] == 'B') {
-        //Serial.println("shortening path");
-        shortPath();
-      }
+  else if (canGo)
+  {
+    left();
+    straight();
+    path[pathLength] = 'S';
+    pathLength++;
+  }
+  else
+  {
+    left();
+    if (fping() > 20)
+    {
       straight();
+      path[pathLength] = 'L';
+      pathLength++;
     }
-    readSensors();
-    if (leftFarReading < 200 && leftCenterReading < 200 && rightCenterReading < 200
-        && rightFarReading < 200 && leftNearReading < 200 && rightNearReading < 200) {
-      turnAround();
+    else
+    {
+      turnaround();
+      straight();
+      path[pathLength] = 'B';
+      pathLength++;
     }
-  */
+  }
 
 }
+
+void straight()
+{
+  int dist = fping();
+  int dist2 = 0;
+  bool oke = true;
+  digitalWrite(leftMotor1, HIGH);
+  digitalWrite(leftMotor2, LOW);
+  digitalWrite(rightMotor1, HIGH);
+  digitalWrite(rightMotor2, LOW);
+
+  while (oke)
+  {
+    dist2 = fping();
+    if(dist2 < dist - 20)
+    {
+      oke = false;
+    }
+  }
+
+  digitalWrite(leftMotor1, LOW);
+  digitalWrite(leftMotor2, LOW);
+  digitalWrite(rightMotor1, LOW);
+  digitalWrite(rightMotor2, LOW);
+
+  delay(500);
+}
+
+int fping()
+{
+  int totaldist = 0;
+  for(int i = 0; i < 10; ++i)
+  {
+    totaldist += sonar.ping_cm();
+    delay(1);
+  }
+  return totaldist/10;
+}
+
+void left()
+{
+  digitalWrite(leftMotor1, LOW);
+  digitalWrite(leftMotor2, HIGH);
+  digitalWrite(rightMotor1, HIGH);
+  digitalWrite(rightMotor2, LOW);
+
+  delay(turndelay);
+
+  digitalWrite(leftMotor1, LOW);
+  digitalWrite(leftMotor2, LOW);
+  digitalWrite(rightMotor1, LOW);
+  digitalWrite(rightMotor2, LOW);
+
+  delay(500);
+}
+
+void turnaround()
+{
+  digitalWrite(leftMotor1, HIGH);
+  digitalWrite(leftMotor2, LOW);
+  digitalWrite(rightMotor1, LOW);
+  digitalWrite(rightMotor2, HIGH);
+
+  delay(turndelay * 2);
+
+  digitalWrite(leftMotor1, LOW);
+  digitalWrite(leftMotor2, LOW);
+  digitalWrite(rightMotor1, LOW);
+  digitalWrite(rightMotor2, LOW);
+
+  delay(500);
+}
+
+void right()
+{
+  digitalWrite(leftMotor1, HIGH);
+  digitalWrite(leftMotor2, LOW);
+  digitalWrite(rightMotor1, LOW);
+  digitalWrite(rightMotor2, HIGH);
+
+  delay(turndelay);
+
+  digitalWrite(leftMotor1, LOW);
+  digitalWrite(leftMotor2, LOW);
+  digitalWrite(rightMotor1, LOW);
+  digitalWrite(rightMotor2, LOW);
+
+  delay(500);
+}
+
 void done() {
   digitalWrite(leftMotor1, LOW);
   digitalWrite(leftMotor2, LOW);
@@ -197,188 +196,11 @@ void done() {
   replaystage = 1;
   path[pathLength] = 'D';
   pathLength++;
-  while (analogRead(leftFarSensor) > 200) {
-    digitalWrite(led, LOW);
-    delay(150);
-    digitalWrite(led, HIGH);
-    delay(150);
-  }
-  delay(500);
+  shortPath();
+  delay(15000);
   replay();
 }
 
-void turnLeft() {
-  /*
-    while (analogRead(rightCenterSensor) > 200 || analogRead(leftCenterSensor) > 200) {
-      digitalWrite(leftMotor1, LOW);
-      digitalWrite(leftMotor2, HIGH);
-      digitalWrite(rightMotor1, HIGH);
-      digitalWrite(rightMotor2, LOW);
-      delay(2);
-      digitalWrite(leftMotor1, LOW);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, LOW);
-      digitalWrite(rightMotor2, LOW);
-      delay(1);
-    }
-
-    while (analogRead(rightCenterSensor) < 200) {
-      digitalWrite(leftMotor1, LOW);
-      digitalWrite(leftMotor2, HIGH);
-      digitalWrite(rightMotor1, HIGH);
-      digitalWrite(rightMotor2, LOW);
-      delay(2);
-      digitalWrite(leftMotor1, LOW);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, LOW);
-      digitalWrite(rightMotor2, LOW);
-      delay(1);
-    }
-  */
-  digitalWrite(rightMotor1, HIGH);
-  digitalWrite(rightMotor2, LOW);
-  digitalWrite(leftMotor1, LOW);
-  digitalWrite(leftMotor2, HIGH);
-  delay(50);
-  digitalWrite(rightMotor1, LOW);
-  digitalWrite(rightMotor2, LOW);
-  digitalWrite(leftMotor1, LOW);
-  digitalWrite(leftMotor2, LOW);
-
-
-  if (replaystage == 0) {
-    path[pathLength] = 'L';
-    Serial.println("L");
-    pathLength++;
-    //Serial.print("Path length: ");
-    //Serial.println(pathLength);
-    if (path[pathLength - 2] == 'B') {
-      //Serial.println("shortening path");
-      shortPath();
-    }
-  }
-}
-/*
-void turnRight() {
-
-  while (analogRead(rightCenterSensor) > 200) {
-    digitalWrite(leftMotor1, HIGH);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, HIGH);
-    delay(2);
-    digitalWrite(leftMotor1, LOW);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, LOW);
-    delay(1);
-  }
-  while (analogRead(rightCenterSensor) < 200) {
-    digitalWrite(leftMotor1, HIGH);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, HIGH);
-    delay(2);
-    digitalWrite(leftMotor1, LOW);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, LOW);
-    delay(1);
-  }
-  while (analogRead(leftCenterSensor) < 200) {
-    digitalWrite(leftMotor1, HIGH);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, HIGH);
-    delay(2);
-    digitalWrite(leftMotor1, LOW);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, LOW);
-    delay(1);
-  }
-
-  if (replaystage == 0) {
-    path[pathLength] = 'R';
-    Serial.println("r");
-    pathLength++;
-    Serial.print("Path length: ");
-    Serial.println(pathLength);
-    if (path[pathLength - 2] == 'B') {
-      Serial.println("shortening path");
-      shortPath();
-    }
-  }
-}
-*/
-void straight() {
-  /*
-  if ( analogRead(leftCenterSensor) < 200) {
-    digitalWrite(leftMotor1, HIGH);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, HIGH);
-    digitalWrite(rightMotor2, LOW);
-    delay(1);
-    digitalWrite(leftMotor1, HIGH);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, LOW);
-    delay(5);
-    return;
-  }
-  if (analogRead(rightCenterSensor) < 200) {
-    digitalWrite(leftMotor1, HIGH);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, HIGH);
-    digitalWrite(rightMotor2, LOW);
-    delay(1);
-    digitalWrite(leftMotor1, LOW);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, HIGH);
-    digitalWrite(rightMotor2, LOW);
-    delay(5);
-    return;
-  }
-  */
-/*
-  digitalWrite(leftMotor1, HIGH);
-  digitalWrite(leftMotor2, LOW);
-  digitalWrite(rightMotor1, HIGH);
-  digitalWrite(rightMotor2, LOW);
-  delay(4);
-  digitalWrite(leftMotor1, LOW);
-  digitalWrite(leftMotor2, LOW);
-  digitalWrite(rightMotor1, LOW);
-  digitalWrite(rightMotor2, LOW);
-  delay(1);
-*/
-}
-
-void turnAround() {
-  digitalWrite(leftMotor1, HIGH);
-  digitalWrite(leftMotor2, LOW);
-  digitalWrite(rightMotor1, HIGH);
-  digitalWrite(rightMotor2, LOW);
-  delay(150);
-  while (analogRead(leftCenterSensor) < 200) {
-    digitalWrite(leftMotor1, LOW);
-    digitalWrite(leftMotor2, HIGH);
-    digitalWrite(rightMotor1, HIGH);
-    digitalWrite(rightMotor2, LOW);
-    delay(2);
-    digitalWrite(leftMotor1, LOW);
-    digitalWrite(leftMotor2, LOW);
-    digitalWrite(rightMotor1, LOW);
-    digitalWrite(rightMotor2, LOW);
-    delay(1);
-  }
-  path[pathLength] = 'B';
-  pathLength++;
-  straight();
-  //Serial.println("b");
-  //Serial.print("Path length: ");
-  //Serial.println(pathLength);
-}
 
 void shortPath() {
   int shortDone = 0;
@@ -432,9 +254,6 @@ void shortPath() {
   //printPath();
 }
 
-
-
-
 void printPath() {
   Serial.println("+++++++++++++++++");
   int x;
@@ -447,50 +266,44 @@ void printPath() {
 
 
 void replay() {
-  readSensors();
-  if (leftFarReading < 200 && rightFarReading < 200) {
+  if (path[readLength] == 'D') {
+    digitalWrite(leftMotor1, HIGH);
+    digitalWrite(leftMotor2, LOW);
+    digitalWrite(rightMotor1, HIGH);
+    digitalWrite(rightMotor2, LOW);
+    delay(100);
+    digitalWrite(leftMotor1, LOW);
+    digitalWrite(leftMotor2, LOW);
+    digitalWrite(rightMotor1, LOW);
+    digitalWrite(rightMotor2, LOW);
+    //endMotion();
+  }
+  if (path[readLength] == 'L') {
+    digitalWrite(leftMotor1, HIGH);
+    digitalWrite(leftMotor2, LOW);
+    digitalWrite(rightMotor1, HIGH);
+    digitalWrite(rightMotor2, LOW);
+    delay(leapTime);
+    left();
+  }
+  if (path[readLength] == 'R') {
+    digitalWrite(leftMotor1, HIGH);
+    digitalWrite(leftMotor2, LOW);
+    digitalWrite(rightMotor1, HIGH);
+    digitalWrite(rightMotor2, LOW);
+    delay(leapTime);
+    right();
+  }
+  if (path[readLength] == 'S') {
+    digitalWrite(leftMotor1, HIGH);
+    digitalWrite(leftMotor2, LOW);
+    digitalWrite(rightMotor1, HIGH);
+    digitalWrite(rightMotor2, LOW);
+    delay(leapTime);
     straight();
   }
-  else {
-    if (path[readLength] == 'D') {
-      digitalWrite(leftMotor1, HIGH);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, HIGH);
-      digitalWrite(rightMotor2, LOW);
-      delay(100);
-      digitalWrite(leftMotor1, LOW);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, LOW);
-      digitalWrite(rightMotor2, LOW);
-      endMotion();
-    }
-    if (path[readLength] == 'L') {
-      digitalWrite(leftMotor1, HIGH);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, HIGH);
-      digitalWrite(rightMotor2, LOW);
-      delay(leapTime);
-      turnLeft();
-    }
-    if (path[readLength] == 'R') {
-      digitalWrite(leftMotor1, HIGH);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, HIGH);
-      digitalWrite(rightMotor2, LOW);
-      delay(leapTime);
-      turnRight();
-    }
-    if (path[readLength] == 'S') {
-      digitalWrite(leftMotor1, HIGH);
-      digitalWrite(leftMotor2, LOW);
-      digitalWrite(rightMotor1, HIGH);
-      digitalWrite(rightMotor2, LOW);
-      delay(leapTime);
-      straight();
-    }
 
-    readLength++;
-  }
+  readLength++;
 
   replay();
 
